@@ -1,9 +1,6 @@
 package com.altimetrik.altimetrics.service;
 
-import com.altimetrik.altimetrics.pojo.Iteration;
-import com.altimetrik.altimetrics.pojo.Project;
-import com.altimetrik.altimetrics.pojo.ProjectGroup;
-import com.altimetrik.altimetrics.pojo.Story;
+import com.altimetrik.altimetrics.pojo.*;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -44,7 +41,7 @@ public class RallyService {
                 group.setProjects(getProjectGroupChildrens(group));
                 //List<Iteration> iterations = getAllIterationByProject(project);
                 //project.setIterations(iterations);
-                projectGroupList.add(group);
+                if(group.getProjects().size()>0)projectGroupList.add(group);
             }
 
             return projectGroupList;
@@ -65,6 +62,23 @@ public class RallyService {
         if(currentIteration.isPresent()){
             List<Story> currentSprintStories = getStoriesBySprintId(currentIteration.get().getIterationId());
            return  currentSprintStories;
+        }
+        return null;
+    }
+
+    public IterationMetrics getIterationMetricsByIterationId(String iterationId) throws IOException {
+        GetRequest iterationMericsRequest = new GetRequest("/iterationstatus/"+iterationId);
+        GetResponse iterationMericsResponse = rallyRestApi.get(iterationMericsRequest);
+        if (iterationMericsResponse.wasSuccessful()) {
+            JsonObject iterationMertics = iterationMericsResponse.getObject().getAsJsonObject();
+            IterationMetrics metrics = new IterationMetrics();
+            metrics.setPlannedPoints(iterationMertics.get("ActualPlannedAmount").getAsInt());
+            metrics.setAcceptedpoints(iterationMertics.get("AcceptedAmount").getAsInt());
+            metrics.setCompletedPoints(iterationMertics.get("CompletedAmount").getAsInt());
+            metrics.setDefinedPoints(iterationMertics.get("DefinedAmount").getAsInt());
+            metrics.setInProgresspoints(iterationMertics.get("InProgressAmount").getAsInt());
+            metrics.setDoPoints(metrics.getCompletedPoints()+metrics.getAcceptedpoints());
+            return metrics;
         }
         return null;
     }

@@ -21,9 +21,6 @@ public class ProjectController {
 
     @GetMapping()
     public List<ProjectGroup> getAllProjects() throws IOException {
-//        for (int i = 0; i < 10; i++) {
-//            rallyService.getAllProjects();
-//        }
        return rallyService.getAllProjects();
     }
 

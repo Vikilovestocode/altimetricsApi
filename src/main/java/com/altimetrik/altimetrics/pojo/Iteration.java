@@ -15,6 +15,7 @@ public class Iteration {
     private String sprintName;
     private String iterationId;
     private List<Story> stories;
+    private IterationMetrics iterationMetrics;
 
     public String getStartDate() {
         return startDate;
@@ -54,5 +55,13 @@ public class Iteration {
 
     public void setStories(List<Story> stories) {
         this.stories = stories;
+    }
+
+    public IterationMetrics getIterationMetrics() {
+        return iterationMetrics;
+    }
+
+    public void setIterationMetrics(IterationMetrics iterationMetrics) {
+        this.iterationMetrics = iterationMetrics;
     }
 }

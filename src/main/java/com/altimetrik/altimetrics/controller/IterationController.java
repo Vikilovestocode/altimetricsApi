@@ -1,6 +1,7 @@
 package com.altimetrik.altimetrics.controller;
 
 import com.altimetrik.altimetrics.pojo.Iteration;
+import com.altimetrik.altimetrics.pojo.IterationMetrics;
 import com.altimetrik.altimetrics.pojo.Project;
 import com.altimetrik.altimetrics.pojo.Story;
 import com.altimetrik.altimetrics.service.RallyService;
@@ -25,5 +26,10 @@ public class IterationController {
     @GetMapping("/{iterationId}")
     public List<Story> getStoriesBySprint(@PathVariable String iterationId) throws IOException {
        return rallyService.getStoriesBySprintId(iterationId);
+    }
+
+    @GetMapping("/metrics/{iterationId}")
+    public IterationMetrics getSprintMetrics(@PathVariable String iterationId) throws IOException {
+        return rallyService.getIterationMetricsByIterationId(iterationId);
     }
 }
