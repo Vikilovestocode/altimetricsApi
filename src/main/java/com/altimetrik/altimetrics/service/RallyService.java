@@ -152,7 +152,7 @@ public class RallyService {
         return storyList;
     }
 
-    private List<Project> getProjectGroupChildrens(ProjectGroup projectGroup) throws IOException {
+    public List<Project> getProjectGroupChildrens(ProjectGroup projectGroup) throws IOException {
         GetRequest getChildrensRequest = new GetRequest("/Project/"+projectGroup.getGroupId()+"/Children");
         GetResponse getAllChildrensResponse = rallyRestApi.get(getChildrensRequest);
         List<Project> childrenProjectList = new ArrayList<>();
