@@ -6,11 +6,17 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.rallydev.rest.RallyRestApi;
 import com.rallydev.rest.request.GetRequest;
+import com.rallydev.rest.request.QueryRequest;
 import com.rallydev.rest.response.GetResponse;
+import com.rallydev.rest.response.QueryResponse;
+import com.rallydev.rest.util.Fetch;
+import com.rallydev.rest.util.QueryFilter;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -21,7 +27,8 @@ import java.util.Optional;
 @Service
 public class RallyService {
 
-    private DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ENGLISH);
+	private static final DecimalFormat df = new DecimalFormat("0.00");
+	private DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ENGLISH);
 
     @Autowired
     RallyRestApi rallyRestApi;
@@ -73,16 +80,66 @@ public class RallyService {
             JsonObject iterationMertics = iterationMericsResponse.getObject().getAsJsonObject();
             IterationMetrics metrics = new IterationMetrics();
             metrics.setPlannedPoints(iterationMertics.get("ActualPlannedAmount").getAsInt());
-            metrics.setAcceptedpoints(iterationMertics.get("AcceptedAmount").getAsInt());
-            metrics.setCompletedPoints(iterationMertics.get("CompletedAmount").getAsInt());
-            metrics.setDefinedPoints(iterationMertics.get("DefinedAmount").getAsInt());
-            metrics.setInProgresspoints(iterationMertics.get("InProgressAmount").getAsInt());
-            metrics.setDoPoints(metrics.getCompletedPoints()+metrics.getAcceptedpoints());
+            metrics.setAcceptedStatePoints(iterationMertics.get("AcceptedAmount").getAsInt());
+            metrics.setCompletedStatePoints(iterationMertics.get("CompletedAmount").getAsInt());
+            metrics.setDefinedStatePoints(iterationMertics.get("DefinedAmount").getAsInt());
+            metrics.setInProgressStatePoints(iterationMertics.get("InProgressAmount").getAsInt());
+            metrics.setDoPoints(metrics.getCompletedStatePoints()+metrics.getAcceptedStatePoints());
             return metrics;
         }
         return null;
     }
-
+    
+    public IterationMetrics getMetricsByProject(Project project) throws IOException {
+    	String projectRef = "/project/"+project.getProjectId();
+    	QueryRequest  iterationRequest = new QueryRequest("IterationStatus");
+        iterationRequest.setFetch(new Fetch("Name","AcceptedAmount","ActualPlannedAmount","CompletedAmount","InProgressAmount","DefinedAmount"));
+        iterationRequest.setScopedDown(false);
+        iterationRequest.setScopedUp(false);
+        iterationRequest.setProject(projectRef);
+        iterationRequest.setOrder("Iteration.EndDate DESC");
+        iterationRequest.setQueryFilter(new QueryFilter("Iteration.StartDate", "<=", LocalDate.now().toString()));
+        
+        QueryResponse iterationStatusQueryResponse = rallyRestApi.query(iterationRequest);
+        IterationMetrics metrics = new IterationMetrics();
+        if (iterationStatusQueryResponse.wasSuccessful()) {
+        	int totalCount = iterationStatusQueryResponse.getTotalResultCount();
+        	if(totalCount > 0) {
+        		JsonArray iterationStatuses = iterationStatusQueryResponse.getResults();
+        		JsonObject currentIterationStatus = iterationStatuses.get(0).getAsJsonObject();
+        		
+        		metrics.setCurrentSprintName(currentIterationStatus.get("Name").getAsString());
+                metrics.setPlannedPoints(currentIterationStatus.get("ActualPlannedAmount").getAsInt());
+                metrics.setAcceptedStatePoints(currentIterationStatus.get("AcceptedAmount").getAsInt());
+                metrics.setCompletedStatePoints(currentIterationStatus.get("CompletedAmount").getAsInt());
+                metrics.setDefinedStatePoints(currentIterationStatus.get("DefinedAmount").getAsInt());
+                metrics.setInProgressStatePoints(currentIterationStatus.get("InProgressAmount").getAsInt());
+                metrics.setDoPoints(metrics.getCompletedStatePoints()+metrics.getAcceptedStatePoints());
+                metrics.setSayDoPercentage(Float.valueOf(df.format(getPercentage(metrics.getDoPoints(), metrics.getPlannedPoints()))));
+                
+                if(totalCount >= 3) {
+                	metrics.setLatestSprintPoints(iterationStatuses.get(1).getAsJsonObject().get("AcceptedAmount").getAsInt());
+                    int totalAcceptedPoints = 0;
+                    for (int i=2;i<totalCount;i++) {
+                        JsonObject iterationStatusObject = iterationStatuses.get(i).getAsJsonObject();
+                        totalAcceptedPoints += iterationStatusObject.get("AcceptedAmount").getAsInt();
+                    }
+                    metrics.setLastSprintsAverage(Integer.divideUnsigned(totalAcceptedPoints, totalCount-2));
+                    metrics.setVelocityPercentage(Float.valueOf(df.format(getPercentage(metrics.getLatestSprintPoints(), metrics.getLastSprintsAverage()))));
+                }
+        	}
+        }
+        return metrics;
+    }
+    
+    private Float getPercentage(int base, int percent) {
+    	if(base != 0 && percent != 0) {
+    		return (base * 100.0f) / percent;
+    	}
+    	
+    	return 0.0f;
+    }
+    
     public boolean isCurrentIteration(Iteration iteration){
 
         LocalDate startDate = LocalDate.parse(iteration.getStartDate(), inputFormatter);
@@ -152,7 +209,7 @@ public class RallyService {
         return storyList;
     }
 
-    private List<Project> getProjectGroupChildrens(ProjectGroup projectGroup) throws IOException {
+    public List<Project> getProjectGroupChildrens(ProjectGroup projectGroup) throws IOException {
         GetRequest getChildrensRequest = new GetRequest("/Project/"+projectGroup.getGroupId()+"/Children");
         GetResponse getAllChildrensResponse = rallyRestApi.get(getChildrensRequest);
         List<Project> childrenProjectList = new ArrayList<>();
