@@ -24,7 +24,7 @@ public class GroupDto {
 	private String engineeringManager;
 	private String scrumMaster;
 	private String technology;
-	
+	private String rallyGroupId;
 	private List<Project> projects;
 	
 }

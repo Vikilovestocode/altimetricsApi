@@ -19,10 +19,7 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class RallyService {
@@ -72,6 +69,21 @@ public class RallyService {
         }
         return null;
     }
+
+    public Object getProjectWithStoriesAndMetrics(Project project) throws IOException {
+        List<Iteration> iterations = getAllIterationByProject(project);
+        Optional<Iteration> currentIteration = iterations.stream().filter(i -> isCurrentIteration(i)).findFirst();
+        if(currentIteration.isPresent()){
+            Map<String, Object> map = new HashMap<>();
+            List<Story> currentSprintStories = getStoriesBySprintId(currentIteration.get().getIterationId());
+            map.put("currIteration", currentIteration);
+            map.put("stories", currentSprintStories);
+            map.put("iterationMetrics", getMetricsByProject(project));
+            return  map;
+        }
+        return null;
+    }
+
 
     public IterationMetrics getIterationMetricsByIterationId(String iterationId) throws IOException {
         GetRequest iterationMericsRequest = new GetRequest("/iterationstatus/"+iterationId);

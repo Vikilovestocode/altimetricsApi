@@ -6,13 +6,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.altimetrik.altimetrics.entity.GroupDetails;
 import com.altimetrik.altimetrics.pojo.GroupDto;
@@ -30,7 +24,7 @@ public class GroupDetailsController {
        return new ResponseEntity<List<GroupDto>>(groupDetailsService.getAllGroupDetails(), HttpStatus.OK);
     }
 	
-	@GetMapping(value = "/show/{rallyGroupId}")
+	@GetMapping(value = "/{rallyGroupId}")
     public ResponseEntity<GroupDto> getGroupDetailsById(@PathVariable("rallyGroupId") String rallyGroupId) throws IOException {
        return new ResponseEntity<GroupDto>(groupDetailsService.getGroupDetailsById(rallyGroupId), HttpStatus.OK);
     }
@@ -48,5 +42,10 @@ public class GroupDetailsController {
 	@PutMapping(value = "{rallyGroupId}")
     public ResponseEntity<GroupDto> updateGroupDetails(@PathVariable("rallyGroupId") String rallyGroupId, @RequestBody GroupDetails groupDetails) throws IOException {
        return new ResponseEntity<GroupDto>(groupDetailsService.updateGroupDetails(rallyGroupId, groupDetails), HttpStatus.ACCEPTED);
+    }
+
+    @PatchMapping(value = "{rallyGroupId}")
+    public ResponseEntity<GroupDto> updateGroupDetailsPatch(@RequestBody GroupDetails groupDetails) throws IOException {
+        return new ResponseEntity<GroupDto>(groupDetailsService.updateGroupDetails(groupDetails.getRallyGroupId(), groupDetails), HttpStatus.ACCEPTED);
     }
 }
