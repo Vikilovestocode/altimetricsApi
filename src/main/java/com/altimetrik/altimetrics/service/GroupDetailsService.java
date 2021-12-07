@@ -91,6 +91,7 @@ public class GroupDetailsService {
 				.engineeringManager(sourceGroupDetails.getEngineeringManager())
 				.scrumMaster(sourceGroupDetails.getScrumMaster())
 				.technology(sourceGroupDetails.getTechnology())
+				.rallyGroupId(sourceGroupDetails.getRallyGroupId())
 				.build();
 				
 		try {
