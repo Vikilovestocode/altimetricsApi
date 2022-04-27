@@ -45,7 +45,7 @@ public class RallyService {
                 group.setProjects(getProjectGroupChildrens(group));
                 //List<Iteration> iterations = getAllIterationByProject(project);
                 //project.setIterations(iterations);
-                if(group.getProjects().size()>0)projectGroupList.add(group);
+              projectGroupList.add(group);
             }
 
             return projectGroupList;
@@ -174,10 +174,12 @@ public class RallyService {
         GetRequest getProjectIdRequest = new GetRequest("/projects/" + project.getProjectId());
         GetResponse getProjectIdResponse = rallyRestApi.get(getProjectIdRequest);
         List<Iteration> iterationList = new ArrayList<>();
+        System.out.println(" getProjectIdResponse "+getProjectIdResponse.wasSuccessful());
         if (getProjectIdResponse.wasSuccessful()) {
             String projectObjectId = getProjectIdResponse.getObject().getAsJsonObject().get("ObjectID").getAsString();
 
             GetRequest iterationListRequest = new GetRequest("/Projects/" + projectObjectId + "/Iterations");
+            iterationListRequest.addParam("pagesize", Integer.MAX_VALUE+"");
             GetResponse iterationListResponse = rallyRestApi.get(iterationListRequest);
             if (iterationListResponse.wasSuccessful()) {
                 JsonArray iterations = iterationListResponse.getObject().get("Results").getAsJsonArray();
@@ -204,16 +206,26 @@ public class RallyService {
         GetRequest storiesListRequest = new GetRequest("/Iteration/"+iterationId+"/WorkProducts");
         GetResponse storiesListResponse = rallyRestApi.get(storiesListRequest);
         List<Story> storyList = new ArrayList<>();
+
         if(storiesListResponse.wasSuccessful()){
             JsonArray stories = storiesListResponse.getObject().getAsJsonObject().getAsJsonArray("Results");
             for (JsonElement story : stories) {
                 JsonObject iterationObject = story.getAsJsonObject();
                 Story s = new Story();
-                s.setName(iterationObject.get("Name").getAsString());
-                s.setPlanEstimate(iterationObject.get("PlanEstimate").toString());
-                s.setScheduleState(iterationObject.get("ScheduleState").getAsString());
-                s.setStoryId(iterationObject.get("FormattedID").getAsString());
-                String storyType = iterationObject.get("c_StoryType")==null ?iterationObject.get("_type").getAsString():iterationObject.get("c_StoryType").getAsString();
+                s.setName(iterationObject.has("Name")? iterationObject.get("Name").getAsString(): "");
+                s.setPlanEstimate(iterationObject.has("PlanEstimate")?iterationObject.get("PlanEstimate").toString(): "");
+                s.setScheduleState(iterationObject.has("ScheduleState")?iterationObject.get("ScheduleState").getAsString(): "");
+                s.setStoryId(iterationObject.has("FormattedID")?iterationObject.get("FormattedID").getAsString(): "");
+                String storyType = "";
+/*                if(iterationObject.has("c_StoryType")){
+                    storyType = iterationObject.get("c_StoryType").getAsString();
+                } else {
+                    if(iterationObject.has("_type")){
+                        storyType = iterationObject.get("_type").getAsString();
+                    }
+                }*/
+
+//                String storyType = iterationObject.get("c_StoryType")==null ?iterationObject.get("_type").getAsString():iterationObject.get("c_StoryType").getAsString();
                 s.setStoryType(storyType);
                 storyList.add(s);
             }

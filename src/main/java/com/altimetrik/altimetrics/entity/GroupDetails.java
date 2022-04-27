@@ -1,11 +1,6 @@
 package com.altimetrik.altimetrics.entity;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -14,6 +9,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+
+import java.util.List;
 
 @JsonIgnoreProperties({"hibernateLazyInitializer"})
 @Entity
@@ -27,6 +24,13 @@ public class GroupDetails {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
+
+/*
+
+	@OneToMany(mappedBy = "projects", fetch = FetchType.LAZY,
+			cascade = CascadeType.ALL)
+	private List<Project> projects;
+*/
 
 	@NonNull
 	@Column(name = "group_name", unique = true, nullable = false)
