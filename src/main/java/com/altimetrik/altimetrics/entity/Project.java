@@ -5,17 +5,17 @@ import lombok.*;
 
 import javax.persistence.*;
 
-/*@JsonIgnoreProperties({"hibernateLazyInitializer"})
+@JsonIgnoreProperties({"hibernateLazyInitializer"})
 @Entity
 @Table(name = "projects")
 @Data
 @Builder
 @NoArgsConstructor
-@AllArgsConstructor*/
+@AllArgsConstructor
 public class Project {
-/*
+
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)*/
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
 	@NonNull
