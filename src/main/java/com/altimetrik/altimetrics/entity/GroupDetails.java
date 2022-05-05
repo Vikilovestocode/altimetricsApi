@@ -31,6 +31,10 @@ public class GroupDetails {
 			cascade = CascadeType.ALL)
 	private List<Project> projects;
 */
+	
+	@OneToMany(fetch = FetchType.LAZY, cascade =CascadeType.ALL)
+	@JoinColumn(name = "group_id", referencedColumnName = "id")
+	private List<Project> projects;
 
 	@NonNull
 	@Column(name = "group_name", unique = true, nullable = false)
