@@ -14,6 +14,7 @@ public class GroupDto {
 	private String id;//rally-group-id
 	private Long groupDetailsId;//primary key of group_details
 	private String groupName;
+	private String groupNameForDisplay;
 	private String projectDescription;
 	private String engagementType;
 	private String deliveryModel;

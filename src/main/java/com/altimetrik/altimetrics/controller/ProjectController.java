@@ -25,7 +25,7 @@ public class ProjectController {
 
     @GetMapping()
     public List<ProjectGroup> getAllProjects() throws IOException {
-       return rallyService.getAllProjects();
+       return rallyService.getAllProjectsNew();
     }
 
     @PostMapping

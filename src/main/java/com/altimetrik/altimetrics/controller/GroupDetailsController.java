@@ -19,18 +19,22 @@ public class GroupDetailsController {
 	@Autowired
 	private GroupDetailsService groupDetailsService;
 	
-	@GetMapping
+	@GetMapping()
     public ResponseEntity<List<GroupDto>> getAllGroupDetails() throws IOException {
        return new ResponseEntity<List<GroupDto>>(groupDetailsService.getAllGroupDetails(), HttpStatus.OK);
     }
 	
-	@GetMapping(value = "/{rallyGroupId}")
-    public ResponseEntity<GroupDto> getGroupDetailsById(@PathVariable("rallyGroupId") String rallyGroupId) throws IOException {
-       return new ResponseEntity<GroupDto>(groupDetailsService.getGroupDetailsById(rallyGroupId), HttpStatus.OK);
+//	@GetMapping(value = "{rallyGroupId}")
+    @RequestMapping(value="{rallyGroupId}", method=RequestMethod.GET, produces="application/json")
+    public ResponseEntity<GroupDto> getGroupDetailsById(@PathVariable(required = true) String rallyGroupId) throws IOException {
+        System.out.println(" getGroupDetailsById :"+rallyGroupId);
+        GroupDto groupDto = groupDetailsService.getGroupDetailsById(rallyGroupId);
+        System.out.println(" getGroupDetailsById groupDto:"+groupDto.toString());
+       return new ResponseEntity<GroupDto>(groupDto, HttpStatus.OK);
     }
 	
 	@GetMapping(value = "/name/{groupName}")
-    public ResponseEntity<GroupDto> getGroupDetailsByName(@PathVariable("groupName") String groupName) throws IOException {
+    public ResponseEntity<GroupDto> getGroupDetailsByName(@PathVariable(name="groupName", required = true) String groupName) throws IOException {
        return new ResponseEntity<GroupDto>(groupDetailsService.getGroupDetailsByName(groupName), HttpStatus.OK);
     }
 	
@@ -41,11 +45,15 @@ public class GroupDetailsController {
 	
 	@PutMapping(value = "{rallyGroupId}")
     public ResponseEntity<GroupDto> updateGroupDetails(@PathVariable("rallyGroupId") String rallyGroupId, @RequestBody GroupDetails groupDetails) throws IOException {
+        System.out.println("PutMapping updateGroupDetailsPatch :"+rallyGroupId);
+        groupDetails.setId(Long.valueOf(rallyGroupId));
        return new ResponseEntity<GroupDto>(groupDetailsService.updateGroupDetails(rallyGroupId, groupDetails), HttpStatus.ACCEPTED);
     }
 
     @PatchMapping(value = "{rallyGroupId}")
-    public ResponseEntity<GroupDto> updateGroupDetailsPatch(@RequestBody GroupDetails groupDetails) throws IOException {
-        return new ResponseEntity<GroupDto>(groupDetailsService.updateGroupDetails(groupDetails.getRallyGroupId(), groupDetails), HttpStatus.ACCEPTED);
+    public ResponseEntity<GroupDto> updateGroupDetailsPatch(@PathVariable("rallyGroupId") String rallyGroupId, @RequestBody GroupDetails groupDetails) throws IOException {
+        System.out.println("PatchMapping updateGroupDetailsPatch :"+rallyGroupId+": groupDetails :"+groupDetails);
+	    groupDetails.setId(Long.valueOf(rallyGroupId));
+        return new ResponseEntity<GroupDto>(groupDetailsService.updateGroupDetails(rallyGroupId, groupDetails), HttpStatus.ACCEPTED);
     }
 }

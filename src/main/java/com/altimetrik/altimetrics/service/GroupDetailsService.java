@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import com.altimetrik.altimetrics.pojo.Project;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -51,7 +52,7 @@ public class GroupDetailsService {
 	}
 	
 	public GroupDto getGroupDetailsById(String rallyGroupId) {
-		GroupDetails groupDetails =  groupDetailsRepository.findByRallyGroupId(rallyGroupId)
+		GroupDetails groupDetails =  groupDetailsRepository.findById(Long.valueOf(rallyGroupId))
 		.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 		return convertToGroupDto(groupDetails);
 	}
@@ -68,7 +69,7 @@ public class GroupDetailsService {
 				&& !StringUtils.hasLength(rallyGroupId)) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
 		}
-		Optional<GroupDetails> existingGroupDetails = groupDetailsRepository.findByRallyGroupId(rallyGroupId);
+		Optional<GroupDetails> existingGroupDetails = groupDetailsRepository.findById(Long.valueOf(rallyGroupId));
 		if(!existingGroupDetails.isPresent()) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND);
 		}
@@ -78,8 +79,9 @@ public class GroupDetailsService {
 	}
 	
 	private GroupDto convertToGroupDto(GroupDetails sourceGroupDetails) {
-		GroupDto groupDto = GroupDto.builder().id(sourceGroupDetails.getRallyGroupId())
+		GroupDto groupDto = GroupDto.builder().id(sourceGroupDetails.getId().toString())
 				.groupDetailsId(sourceGroupDetails.getId())
+				.groupNameForDisplay(sourceGroupDetails.getGroupNameForDisplay())
 				.groupName(sourceGroupDetails.getGroupName())
 				.projectDescription(sourceGroupDetails.getProjectDescription())
 				.engagementType(sourceGroupDetails.getEngagementType())
@@ -95,10 +97,18 @@ public class GroupDetailsService {
 				.build();
 				
 		try {
-			ProjectGroup projectGroup = new ProjectGroup();
-			projectGroup.setGroupId(sourceGroupDetails.getRallyGroupId());
-			groupDto.setProjects(rallyService.getProjectGroupChildrens(projectGroup));
-		} catch (IOException e) {
+/*			ProjectGroup projectGroup = new ProjectGroup();
+			projectGroup.setGroupId(sourceGroupDetails.getRallyGroupId());*/
+//			groupDto.setProjects(rallyService.getProjectGroupChildrens(projectGroup));
+			//TODO: fix two project type class to one - cleanup
+			log.info(" getProjects :::::: " , sourceGroupDetails.getProjects());
+			groupDto.setProjects(sourceGroupDetails.getProjects().stream().map(project -> {
+				Project temp = new Project();
+				temp.setProjectId(project.getRallyProjectId());
+				temp.setProjectName(project.getProjectName());
+				return temp;
+			}).collect(Collectors.toList()));
+		} catch (Exception e) {
 			log.error("Error in calling rally service", e);
 		}
 		return groupDto;
@@ -116,6 +126,11 @@ public class GroupDetailsService {
 		destinationGroupDetails.setEngineeringManager(sourceGroupDetails.getEngineeringManager());
 		destinationGroupDetails.setScrumMaster(sourceGroupDetails.getScrumMaster());
 		destinationGroupDetails.setTechnology(sourceGroupDetails.getTechnology());
+		/*List<com.altimetrik.altimetrics.entity.Project> newProjects = sourceGroupDetails.getProjects().stream().filter(project ->
+				!destinationGroupDetails.getProjects().stream().anyMatch(extProj -> extProj.getRallyProjectId().equals(project.getRallyProjectId()))).collect(Collectors.toList());*/
+		destinationGroupDetails.getProjects().clear();
+		destinationGroupDetails.getProjects().addAll(sourceGroupDetails.getProjects());
+		System.out.println(" new proejct added::"+destinationGroupDetails.getProjects());
 	}
 
 }

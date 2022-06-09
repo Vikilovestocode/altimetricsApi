@@ -25,19 +25,17 @@ public class GroupDetails {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-/*
 
-	@OneToMany(mappedBy = "projects", fetch = FetchType.LAZY,
-			cascade = CascadeType.ALL)
+	@OneToMany(fetch = FetchType.EAGER,
+			cascade = CascadeType.ALL, orphanRemoval=true)
+	@JoinColumn(name ="group_id", referencedColumnName = "id")
 	private List<Project> projects;
-*/
 
 	@NonNull
 	@Column(name = "group_name", unique = true, nullable = false)
 	private String groupName;
 	
-	@NonNull
-	@Column(name = "rally_group_id", unique = true, nullable = false)
+	@Column(name = "rally_group_id", nullable = true)
 	private String rallyGroupId;
 	
 	@Column(name = "project_description", length = 500)
@@ -69,4 +67,8 @@ public class GroupDetails {
 	
 	@Column(name = "technology")
 	private String technology;
+
+	@Column(name = "group_display_name")
+	private String groupNameForDisplay;
+
 }

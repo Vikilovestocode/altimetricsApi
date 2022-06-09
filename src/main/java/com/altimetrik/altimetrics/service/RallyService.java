@@ -60,6 +60,37 @@ public class RallyService {
         return null;
     }
 
+    public List<ProjectGroup> getAllProjectsNew() throws IOException {
+        QueryRequest allProjectsRequest = new QueryRequest("project");
+        QueryResponse allProjectsResponse = null;
+        try {
+            allProjectsResponse = rallyRestApi.query(allProjectsRequest);
+            if (allProjectsResponse.wasSuccessful()) {
+                JsonArray projectGroups = allProjectsResponse.getResults();
+//                        getObject().getAsJsonObject().get("Results").getAsJsonArray();
+                List<ProjectGroup> projectGroupList = new ArrayList<>();
+                for (JsonElement p : projectGroups) {
+                    ProjectGroup group = new ProjectGroup();
+                    group.setGroupId(p.getAsJsonObject().get("_refObjectUUID").getAsString());
+                    group.setGroupName(p.getAsJsonObject().get("_refObjectName").getAsString());
+//                    group.setProjects(getProjectGroupChildrens(group));
+                    //List<Iteration> iterations = getAllIterationByProject(project);
+                    //project.setIterations(iterations);
+                    projectGroupList.add(group);
+                }
+
+                return projectGroupList;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            if (rallyRestApi != null) {
+                rallyRestApi.close();
+            }
+        }
+        return null;
+    }
+
     public List<Story> getProjectCurrentIterationStories(Project project) throws IOException {
         List<Iteration> iterations = getAllIterationByProject(project);
         Optional<Iteration> currentIteration = iterations.stream().filter(i -> isCurrentIteration(i)).findFirst();
@@ -72,7 +103,7 @@ public class RallyService {
 
     public Object getProjectWithStoriesAndMetrics(Project project) throws IOException {
         List<Iteration> iterations = getAllIterationByProject(project);
-        Optional<Iteration> currentIteration = iterations.stream().filter(i -> isCurrentIteration(i)).findFirst();
+        Optional<Iteration> currentIteration = iterations.stream().sorted(Comparator.comparing(Iteration::getStartDate)).filter(i -> isCurrentIteration(i)).findFirst();
         if(currentIteration.isPresent()){
             Map<String, Object> map = new HashMap<>();
             List<Story> currentSprintStories = getStoriesBySprintId(currentIteration.get().getIterationId());
@@ -101,21 +132,74 @@ public class RallyService {
         }
         return null;
     }
-    
+
+    public IterationMetrics getMetricsByDate(Project project, Iteration currIter) throws IOException {
+        String projectRef = "/project/"+project.getProjectId();
+        QueryRequest  iterationRequest = new QueryRequest("IterationStatus");
+        // IterationStatus
+        iterationRequest.setFetch(new Fetch("Name","AcceptedAmount","ActualPlannedAmount","CompletedAmount","InProgressAmount","DefinedAmount"));
+        iterationRequest.setScopedDown(false);
+        iterationRequest.setScopedUp(false);
+        iterationRequest.setProject(projectRef);
+        iterationRequest.setOrder("Iteration.EndDate DESC");
+        QueryFilter filter = new QueryFilter("Iteration.StartDate", "<=", currIter.getStartDate());
+        filter.and(new QueryFilter("Iteration.StartDate", ">=", currIter.getStartDate()));
+        iterationRequest.setQueryFilter(filter);
+
+        System.out.println(" getWsapiVersion:"+rallyRestApi.getWsapiVersion()+": rallyRestApi client "+rallyRestApi.getClient().getWsapiUrl());
+        System.out.println(" metrics by project:toUrl:"+iterationRequest.toUrl()+": rallyRestApi ");
+
+        QueryResponse iterationStatusQueryResponse = rallyRestApi.query(iterationRequest);
+        IterationMetrics metrics = new IterationMetrics();
+        if (iterationStatusQueryResponse.wasSuccessful()) {
+            int totalCount = iterationStatusQueryResponse.getTotalResultCount();
+            if(totalCount > 0) {
+                JsonArray iterationStatuses = iterationStatusQueryResponse.getResults();
+                JsonObject currentIterationStatus = iterationStatuses.get(0).getAsJsonObject();
+
+                metrics.setCurrentSprintName(currentIterationStatus.get("Name").getAsString());
+                metrics.setPlannedPoints(currentIterationStatus.get("ActualPlannedAmount").getAsInt());
+                metrics.setAcceptedStatePoints(currentIterationStatus.get("AcceptedAmount").getAsInt());
+                metrics.setCompletedStatePoints(currentIterationStatus.get("CompletedAmount").getAsInt());
+                metrics.setDefinedStatePoints(currentIterationStatus.get("DefinedAmount").getAsInt());
+                metrics.setInProgressStatePoints(currentIterationStatus.get("InProgressAmount").getAsInt());
+                metrics.setDoPoints(metrics.getCompletedStatePoints()+metrics.getAcceptedStatePoints());
+                metrics.setSayDoPercentage(Float.valueOf(df.format(getPercentage(metrics.getDoPoints(), metrics.getPlannedPoints()))));
+
+                if(totalCount >= 3) {
+                    metrics.setLatestSprintPoints(iterationStatuses.get(1).getAsJsonObject().get("AcceptedAmount").getAsInt());
+                    int totalAcceptedPoints = 0;
+                    for (int i=2;i<totalCount;i++) {
+                        JsonObject iterationStatusObject = iterationStatuses.get(i).getAsJsonObject();
+                        totalAcceptedPoints += iterationStatusObject.get("AcceptedAmount").getAsInt();
+                    }
+                    metrics.setLastSprintsAverage(Integer.divideUnsigned(totalAcceptedPoints, totalCount-2));
+                    metrics.setVelocityPercentage(Float.valueOf(df.format(getPercentage(metrics.getLatestSprintPoints(), metrics.getLastSprintsAverage()))));
+                }
+            }
+        }
+        return metrics;
+    }
+
     public IterationMetrics getMetricsByProject(Project project) throws IOException {
     	String projectRef = "/project/"+project.getProjectId();
     	QueryRequest  iterationRequest = new QueryRequest("IterationStatus");
+    	// IterationStatus
         iterationRequest.setFetch(new Fetch("Name","AcceptedAmount","ActualPlannedAmount","CompletedAmount","InProgressAmount","DefinedAmount"));
         iterationRequest.setScopedDown(false);
         iterationRequest.setScopedUp(false);
         iterationRequest.setProject(projectRef);
         iterationRequest.setOrder("Iteration.EndDate DESC");
         iterationRequest.setQueryFilter(new QueryFilter("Iteration.StartDate", "<=", LocalDate.now().toString()));
+
+        System.out.println(" getWsapiVersion:"+rallyRestApi.getWsapiVersion()+": rallyRestApi client "+rallyRestApi.getClient().getWsapiUrl());
+        System.out.println(" metrics by project:toUrl:"+iterationRequest.toUrl()+": rallyRestApi ");
         
         QueryResponse iterationStatusQueryResponse = rallyRestApi.query(iterationRequest);
         IterationMetrics metrics = new IterationMetrics();
         if (iterationStatusQueryResponse.wasSuccessful()) {
         	int totalCount = iterationStatusQueryResponse.getTotalResultCount();
+            System.out.println(" totalCount: "+totalCount);
         	if(totalCount > 0) {
         		JsonArray iterationStatuses = iterationStatusQueryResponse.getResults();
         		JsonObject currentIterationStatus = iterationStatuses.get(0).getAsJsonObject();
@@ -128,16 +212,19 @@ public class RallyService {
                 metrics.setInProgressStatePoints(currentIterationStatus.get("InProgressAmount").getAsInt());
                 metrics.setDoPoints(metrics.getCompletedStatePoints()+metrics.getAcceptedStatePoints());
                 metrics.setSayDoPercentage(Float.valueOf(df.format(getPercentage(metrics.getDoPoints(), metrics.getPlannedPoints()))));
-                
+                metrics.setLatestSprintPoints(currentIterationStatus.get("AcceptedAmount").getAsInt());
                 if(totalCount >= 3) {
-                	metrics.setLatestSprintPoints(iterationStatuses.get(1).getAsJsonObject().get("AcceptedAmount").getAsInt());
+//                	metrics.setLatestSprintPoints(iterationStatuses.get(1).getAsJsonObject().get("AcceptedAmount").getAsInt());
                     int totalAcceptedPoints = 0;
                     for (int i=2;i<totalCount;i++) {
                         JsonObject iterationStatusObject = iterationStatuses.get(i).getAsJsonObject();
                         totalAcceptedPoints += iterationStatusObject.get("AcceptedAmount").getAsInt();
                     }
+                    System.out.println(" Integer.divideUnsigned(totalAcceptedPoints, totalCount-2):"+Integer.divideUnsigned(totalAcceptedPoints, totalCount-2));
+                    System.out.println(" totalAcceptedPoints:"+totalAcceptedPoints+": totalCount :"+(totalCount-2));
                     metrics.setLastSprintsAverage(Integer.divideUnsigned(totalAcceptedPoints, totalCount-2));
                     metrics.setVelocityPercentage(Float.valueOf(df.format(getPercentage(metrics.getLatestSprintPoints(), metrics.getLastSprintsAverage()))));
+                    System.out.println(": getLatestSprintPoints :"+ metrics.getLatestSprintPoints()+": getLastSprintsAverage :" +metrics.getLastSprintsAverage()+":velocity:"+metrics.getVelocityPercentage() );
                 }
         	}
         }
@@ -156,7 +243,8 @@ public class RallyService {
 
         LocalDate startDate = LocalDate.parse(iteration.getStartDate(), inputFormatter);
         LocalDate endDate = LocalDate.parse(iteration.getEndDate(), inputFormatter);
-        if(!LocalDate.now().isBefore(startDate) && !LocalDate.now().isAfter(endDate)){
+        LocalDate curr = LocalDate.now();
+        if(!curr.isBefore(startDate) && !curr.isAfter(endDate)){
             return true;
         }
     return false;
